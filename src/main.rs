@@ -1,5 +1,6 @@
-mod request;
 mod database;
+mod request;
+mod visitor;
 use crate::request::{message_post, Message};
 use axum::{
     response::Html,
@@ -7,8 +8,9 @@ use axum::{
     Router,
 };
 use lazy_static::lazy_static;
-use std::sync::atomic::AtomicU64;
+use std::sync::{Arc, Mutex};
 use tera::{Context, Tera};
+use visitor::VisitorLog;
 
 lazy_static! {
     pub static ref TEMPLATES: Tera = {
@@ -24,20 +26,28 @@ lazy_static! {
 }
 
 lazy_static! {
-    static ref VISITOR_COUNT: AtomicU64 = AtomicU64::new(0);
+    static ref VISITORS: Arc<Mutex<VisitorLog>> = Arc::new(Mutex::new(VisitorLog::new()));
 }
 
-fn get_visitors() -> u64 {
-    VISITOR_COUNT.load(std::sync::atomic::Ordering::SeqCst)
+fn get_visitors() -> usize {
+    match VISITORS.lock() {
+        Ok(vis) => vis.get_all_visitors(),
+        Err(_) => {
+            println!("get visitors: thread panicked when holding lock");
+            return 0;
+        }
+    }
 }
 
-fn increment_visitors() -> u64 {
-    VISITOR_COUNT.fetch_add(1, std::sync::atomic::Ordering::SeqCst) + 1
+fn increment_visitors() {
+    match VISITORS.lock() {
+        Ok(mut vis) => vis.add_visitor(),
+        Err(_) => println!("get visitors: thread panicked when holding lock"),
+    }
 }
 
 #[tokio::main]
 async fn main() {
-    println!("{}", serde_json::to_string(&Message::new()).unwrap());
     println!("Starting the server");
     let app = Router::new()
         .route("/", get(index_page))
@@ -51,7 +61,8 @@ async fn main() {
 
 async fn index_page() -> Html<String> {
     let mut context = Context::new();
-    context.insert("visitors", &increment_visitors());
+    increment_visitors();
+    context.insert("visitors", &get_visitors());
     let finished = TEMPLATES
         .render("index.html", &context)
         .unwrap_or_else(error_to_page);
