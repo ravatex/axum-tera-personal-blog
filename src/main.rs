@@ -1,6 +1,7 @@
 mod database;
 mod request;
 mod visitor;
+mod posts;
 use crate::request::{message_post, Message};
 use axum::{
     response::Html,
