@@ -1,24 +1,43 @@
 use comrak::markdown_to_html;
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 use std::{fs, path::Path};
 
-struct BlogPost {
+#[derive(Debug)]
+pub enum BlogError {
+    BlogNotFound(String),
+    NoAccess(String),
+    BlogParsingError(String),
+}
+
+impl std::fmt::Display for BlogError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::BlogNotFound(err) => write!(f, "Blog not found at path {}", err),
+            Self::NoAccess(err) => write!(f, "No access to blog:  {}", err),
+            Self::BlogParsingError(err) => write!(f, "Blog could not be parsed {}", err),
+        }
+    }
+}
+
+impl std::error::Error for BlogError {}
+
+#[derive(Serialize)]
+pub struct BlogPost {
     pub path: String,
     pub contents: String,
     pub blog_data: BlogData,
 }
-
-#[derive(Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct BlogData {
     pub title: String,
     pub date: String,
     pub visible: bool,
 }
 
-pub fn load_blog_post(path: &Path) -> Result<BlogPost, Box<dyn std::error::Error>> {
+fn load_blog_post(path: &Path) -> Result<BlogPost, Box<dyn std::error::Error>> {
     let blog_post = fs::read_to_string(path)?;
 
-    let lines: Vec<&str> = blog_post.splitn(2, "---").collect();
+    let lines: Vec<&str> = blog_post.splitn(3, "---").collect();
 
     if lines.len() < 2 {
         return Err("No blog data (---)".into());
@@ -70,5 +89,8 @@ pub fn get_all_blog_posts() -> Vec<BlogPost> {
         Err(e) => println!("Error with posts directory {e}"),
     }
 
-    posts.into_iter().filter(|post| post.blog_data.visible).collect()
+    posts
+        .into_iter()
+        .filter(|post| post.blog_data.visible)
+        .collect()
 }

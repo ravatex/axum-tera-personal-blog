@@ -1,8 +1,8 @@
 ---
 {
-    title: "First Blog Post"
-    date: "1/2/2025"
-    visible : true
+    "title": "First Blog Post",
+    "date": "1/2/2025",
+    "visible" : true
 }
 ---
 

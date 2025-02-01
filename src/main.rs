@@ -1,14 +1,17 @@
 mod database;
+mod posts;
 mod request;
 mod visitor;
-mod posts;
-use crate::request::{message_post, Message};
+use request::{message_post, Message};
+
 use axum::{
     response::Html,
     routing::{get, post},
     Router,
+    extract::Path
 };
 use lazy_static::lazy_static;
+use posts::{get_all_blog_posts, BlogError};
 use std::sync::{Arc, Mutex};
 use tera::{Context, Tera};
 use visitor::VisitorLog;
@@ -52,7 +55,9 @@ async fn main() {
     println!("Starting the server");
     let app = Router::new()
         .route("/", get(index_page))
-        .route("/message", get(contact_form).post(message_post));
+        .route("/message", get(contact_form).post(message_post))
+        .route("/blogs", get(blogs_page))
+        .route("/blogs/{path}", get(get_blog_from_path));
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
         .await
@@ -71,6 +76,18 @@ async fn index_page() -> Html<String> {
     Html(finished)
 }
 
+async fn blogs_page() -> Html<String> {
+    let mut context = Context::new();
+
+    context.insert("posts", &get_all_blog_posts());
+
+    let finished = TEMPLATES
+        .render("blogs.html", &context)
+        .unwrap_or_else(error_to_page);
+
+    Html(finished)
+}
+
 async fn contact_form() -> Html<String> {
     Html(
         TEMPLATES
@@ -84,4 +101,22 @@ fn error_to_page<T: std::error::Error>(error: T) -> String {
     context.insert("error", &error.to_string());
 
     TEMPLATES.render("error.html", &context).unwrap()
+}
+
+async fn get_blog_from_path(Path(path): Path<String>) -> Html<String> {
+    let blogs = get_all_blog_posts();
+    let post = blogs.iter().find(|x| x.path == path);
+
+    let page = match post {
+        Some(post) => {
+            let mut context = Context::new();
+            context.insert("post", post);
+            TEMPLATES
+                .render("blog_form.html", &context)
+                .unwrap_or_else(error_to_page)
+        }
+        None => error_to_page(BlogError::BlogNotFound(path)),
+    };
+
+    Html(page)
 }
