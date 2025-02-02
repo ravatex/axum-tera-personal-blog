@@ -2,7 +2,7 @@ mod database;
 mod posts;
 mod request;
 mod visitor;
-use request::{message_post, Message};
+use request::{message_post};
 
 use axum::{
     extract::Path,
@@ -11,10 +11,9 @@ use axum::{
     Router,
 };
 use lazy_static::lazy_static;
-use posts::{get_all_blog_posts, BlogError};
-use std::sync::{Arc, Mutex};
+use posts::{blog_refresher, get_blogs, BlogError};
 use tera::{Context, Tera};
-use visitor::VisitorLog;
+use visitor::{get_visitors,increment_visitors};
 
 lazy_static! {
     pub static ref TEMPLATES: Tera = {
@@ -29,30 +28,16 @@ lazy_static! {
     };
 }
 
-lazy_static! {
-    static ref VISITORS: Arc<Mutex<VisitorLog>> = Arc::new(Mutex::new(VisitorLog::new()));
-}
 
-fn get_visitors() -> usize {
-    match VISITORS.lock() {
-        Ok(vis) => vis.get_all_visitors(),
-        Err(_) => {
-            println!("get visitors: thread panicked when holding lock");
-            return 0;
-        }
-    }
-}
 
-fn increment_visitors() {
-    match VISITORS.lock() {
-        Ok(mut vis) => vis.add_visitor(),
-        Err(_) => println!("get visitors: thread panicked when holding lock"),
-    }
-}
-
-#[tokio::main]
+#[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     println!("Starting the server");
+
+
+    tokio::spawn(blog_refresher(tokio::time::Duration::new(5,0)));
+    
+
     let app = Router::new()
         .route("/", get(index_page))
         .route("/message", get(contact_form).post(message_post))
@@ -63,12 +48,13 @@ async fn main() {
         .await
         .unwrap();
     axum::serve(listener, app).await.unwrap();
+
 }
 
 async fn index_page() -> Html<String> {
     let mut context = get_base_context();
     increment_visitors();
-    context.insert("posts", &get_all_blog_posts());
+    context.insert("posts", &*get_blogs().await);
     let finished = TEMPLATES
         .render("index.html", &context)
         .unwrap_or_else(error_to_page);
@@ -79,7 +65,7 @@ async fn index_page() -> Html<String> {
 async fn blogs_page() -> Html<String> {
     let mut context = get_base_context();
 
-    context.insert("posts", &get_all_blog_posts());
+    context.insert("posts", &*get_blogs().await);
 
     let finished = TEMPLATES
         .render("blogs.html", &context)
@@ -105,7 +91,7 @@ fn error_to_page<T: std::error::Error>(error: T) -> String {
 }
 
 async fn get_blog_from_path(Path(path): Path<String>) -> Html<String> {
-    let blogs = get_all_blog_posts();
+    let blogs = &*get_blogs().await;
     let post = blogs.iter().find(|x| x.path == path);
 
     let page = match post {

@@ -1,6 +1,8 @@
 use comrak::markdown_to_html;
 use serde::{Deserialize, Serialize};
+use std::sync::LazyLock;
 use std::{fs, path::Path};
+use tokio::sync::RwLock;
 
 #[derive(Debug)]
 pub enum BlogError {
@@ -93,4 +95,25 @@ pub fn get_all_blog_posts() -> Vec<BlogPost> {
         .into_iter()
         .filter(|post| post.blog_data.visible)
         .collect()
+}
+
+static BLOGS: LazyLock<RwLock<Vec<BlogPost>>> = LazyLock::new(|| get_all_blog_posts().into());
+
+pub async fn get_blogs() -> tokio::sync::RwLockReadGuard<'static, Vec<BlogPost>> {
+    BLOGS.read().await
+}
+
+pub async fn refresh_blogs() {
+    let mut blogs = BLOGS.write().await;
+    *blogs = get_all_blog_posts();
+}
+
+use tokio::time::{self, Duration};
+pub async fn blog_refresher(timeout_between_refreshes: Duration) {
+    let mut interval = time::interval(timeout_between_refreshes);
+    interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
+    loop {
+        interval.tick().await;
+        refresh_blogs().await;
+    }
 }
