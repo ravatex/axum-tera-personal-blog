@@ -2,7 +2,7 @@ mod database;
 mod posts;
 mod request;
 mod visitor;
-use request::{message_post};
+use request::message_post;
 
 use axum::{
     extract::Path,
@@ -13,7 +13,8 @@ use axum::{
 use lazy_static::lazy_static;
 use posts::{blog_refresher, get_blogs, BlogError};
 use tera::{Context, Tera};
-use visitor::{get_visitors,increment_visitors};
+use tower_http::services::ServeDir;
+use visitor::{get_visitors, increment_visitors};
 
 lazy_static! {
     pub static ref TEMPLATES: Tera = {
@@ -28,27 +29,24 @@ lazy_static! {
     };
 }
 
-
-
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 async fn main() {
     println!("Starting the server");
 
-
-    tokio::spawn(blog_refresher(tokio::time::Duration::new(5,0)));
-    
+    tokio::spawn(blog_refresher(tokio::time::Duration::new(5, 0)));
 
     let app = Router::new()
         .route("/", get(index_page))
         .route("/message", get(contact_form).post(message_post))
         .route("/blogs", get(blogs_page))
-        .route("/blogs/{path}", get(get_blog_from_path));
+        .route("/blogs/{path}", get(get_blog_from_path))
+        .nest_service("/static", ServeDir::new("static"))
+        .nest_service("/images", ServeDir::new("images"));
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
         .await
         .unwrap();
     axum::serve(listener, app).await.unwrap();
-
 }
 
 async fn index_page() -> Html<String> {

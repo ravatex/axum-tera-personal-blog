@@ -18,7 +18,15 @@
         <div class="row">
         {% for post in posts %}
             <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card">
+                <div class="card" >
+          {% if post.blog_data.thumbnail %}
+            {% set img = post.blog_data.thumbnail %}
+            {% set alt_text = "thumbnail" %}
+          {% else %}
+           {% set img = "/images/basic_background.png"%} {% set alt_text = "default image: blue background" %}
+          {% endif %}
+            <img src= "{{img}}" class="card-img-top" alt="{{alt_text}}">
+
                     <div class="card-body">
               <h5 class="card-title">{{ post.blog_data.title }}</h5>
               <h6 class="card-subtitle mb-2 text-body-secondary">{{ post.blog_data.date }}</h6>

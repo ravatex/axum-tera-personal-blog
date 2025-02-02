@@ -34,6 +34,7 @@ pub struct BlogData {
     pub title: String,
     pub date: String,
     pub visible: bool,
+    pub thumbnail: Option<String>,
 }
 
 fn load_blog_post(path: &Path) -> Result<BlogPost, Box<dyn std::error::Error>> {
@@ -46,6 +47,7 @@ fn load_blog_post(path: &Path) -> Result<BlogPost, Box<dyn std::error::Error>> {
     }
 
     let blog_data: BlogData = serde_json::from_str(lines[1])?;
+    
 
     let md_html = markdown_to_html(lines[2], &comrak::Options::default());
 
