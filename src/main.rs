@@ -5,10 +5,10 @@ mod visitor;
 use request::{message_post, Message};
 
 use axum::{
+    extract::Path,
     response::Html,
     routing::{get, post},
     Router,
-    extract::Path
 };
 use lazy_static::lazy_static;
 use posts::{get_all_blog_posts, BlogError};
@@ -66,9 +66,8 @@ async fn main() {
 }
 
 async fn index_page() -> Html<String> {
-    let mut context = Context::new();
+    let mut context = get_base_context();
     increment_visitors();
-    context.insert("visitors", &get_visitors());
     context.insert("posts", &get_all_blog_posts());
     let finished = TEMPLATES
         .render("index.html", &context)
@@ -78,7 +77,7 @@ async fn index_page() -> Html<String> {
 }
 
 async fn blogs_page() -> Html<String> {
-    let mut context = Context::new();
+    let mut context = get_base_context();
 
     context.insert("posts", &get_all_blog_posts());
 
@@ -92,7 +91,7 @@ async fn blogs_page() -> Html<String> {
 async fn contact_form() -> Html<String> {
     Html(
         TEMPLATES
-            .render("contact.html", &Context::new())
+            .render("contact.html", &get_base_context())
             .unwrap_or_else(error_to_page),
     )
 }
@@ -100,6 +99,7 @@ async fn contact_form() -> Html<String> {
 fn error_to_page<T: std::error::Error>(error: T) -> String {
     let mut context = Context::new();
     context.insert("error", &error.to_string());
+    println!("error: {:?}", error);
 
     TEMPLATES.render("error.html", &context).unwrap()
 }
@@ -110,7 +110,7 @@ async fn get_blog_from_path(Path(path): Path<String>) -> Html<String> {
 
     let page = match post {
         Some(post) => {
-            let mut context = Context::new();
+            let mut context = get_base_context();
             context.insert("post", post);
             TEMPLATES
                 .render("blog_form.html", &context)
@@ -120,4 +120,10 @@ async fn get_blog_from_path(Path(path): Path<String>) -> Html<String> {
     };
 
     Html(page)
+}
+
+fn get_base_context() -> Context {
+    let mut context = Context::new();
+    context.insert("visitors", &get_visitors());
+    context
 }
