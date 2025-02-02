@@ -1,84 +1,111 @@
 {% extends "base.html" %}
 {% block extra_css %}
-    <style>
-        body {
-            background-color: #f4f6f9;
-        }
+<style>
+    body {
+        background-color: #f4f6f9;
+    }
 
-        .form-container {
-            max-width: 600px;
-            margin: 100px auto;
-            padding: 30px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
+    .form-container {
+        max-width: 600px;
+        margin: 100px auto;
+        padding: 30px;
+        background-color: #fff;
+        border-radius: 10px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
 
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
-        }
-    </style>
+    .btn-primary {
+        background-color: #007bff;
+        border-color: #007bff;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
-    <div class="form-container">
-        <h2 class="text-center mb-4">Contact Us</h2>
-        <form id="contactForm">
-            <div class="mb-3">
-                <label for="name" class="form-label">Name</label>
-                <input type="text" class="form-control" id="name" name="name" required>
-            </div>
-            <div class="mb-3">
-                <label for="email" class="form-label">Email address</label>
-                <input type="email" class="form-control" id="email" name="email" required>
-            </div>
-            <div class="mb-3">
-                <label for="message" class="form-label">Message</label>
-                <textarea class="form-control" id="message" name="message" rows="4" required></textarea>
-            </div>
-            <button type="submit" class="btn btn-primary w-100">Submit</button>
-        </form>
-    </div>
+<div id="liveAlertPlaceholder" class="mb-4" ></div>
+
+<div class="form-container">
+    <h2 class="text-center mb-4">Contact Me</h2>
+    <form id="contactForm">
+
+        <div class="mb-3">
+            <label for="name" class="form-label">Name / Company name</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+        </div>
+        <div class="mb-3">
+            <label for="email" class="form-label">Email address</label>
+            <input type="email" class="form-control" id="email" name="email" placeholder="name@example.com" required>
+        </div>
+        <div class="mb-3">
+            <label for="message" class="form-label">Message</label>
+            <textarea class="form-control" id="message" name="message" rows="4" required></textarea>
+        </div>
+        <div class="form-check mb-3 form-switch">
+            <input class="form-check-input" type="checkbox" role="switch" id="business_inquiry">
+            <label class="form-check-label" for="business_inquiry">Business Inquiry</label>
+        </div>
+        <button type="submit" class="btn btn-primary w-100">Submit</button>
+
+
+    </form>
+</div>
 
 {% endblock %}
 
 {% block extra_js %}
-    <script>
-        document.getElementById("contactForm").addEventListener("submit", function(event) {
-            event.preventDefault();
+<script>
+    const alertPlaceholder = document.getElementById('liveAlertPlaceholder');
 
-            // Create a JSON object with form data
-            const formData = JSON.stringify({
-                name: document.getElementById("name").value,
-                email: document.getElementById("email").value,
-                message: document.getElementById("message").value
-            });
+    let alertCount = 0;
 
-            const options = {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: formData
-            };
+    const appendAlert = (message, type) => {
+        const wrapper = document.createElement('div')
+        wrapper.innerHTML = [
+            `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+            `   <div>${message}</div>`,
+            '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
+            '</div>'
+        ].join('')
 
-            fetch("/message", options).then(response => {
-                    if (!response.ok) {
-                        throw new Error('Network response was not ok');
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    console.log(data);
-                })
-                .catch(error => {
-                    console.error('Fetch error:', error);
-                });
 
-            document.getElementById("contactForm").reset();
+        alertPlaceholder.append(wrapper)
+    }
+    document.getElementById("contactForm").addEventListener("submit", async function(event) {
+        event.preventDefault();
+
+        console.log(document.getElementById("business_inquiry"))
+
+        // Create a JSON object with form data
+        const formData = JSON.stringify({
+            name: document.getElementById("name").value,
+            email: document.getElementById("email").value,
+            message: document.getElementById("message").value,
+            is_business: document.getElementById("business_inquiry").checked
         });
-    </script>
+
+        console.log(formData);
+
+        const options = {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: formData
+        };
+
+        const res = await fetch("/message", options)
+
+        if (res.status === 200) {
+        appendAlert('Form sent succesfully!', 'success')
+        document.getElementById("contactForm").reset();
+      }
+      else {
+        appendAlert('Problem sending form', 'danger')
+
+      }
+
+    });
+</script>
 {% endblock %}
 
 </html>
