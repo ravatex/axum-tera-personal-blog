@@ -24,7 +24,7 @@
         <nav>
             <ul class="nav justify-content-center">
                 <li class="nav-item"><a class="nav-link text-white" href="#">Home</a></li>
-                <li class="nav-item"><a class="nav-link text-white" href="#">About</a></li>
+                <li class="nav-item"><a class="nav-link text-white" href="blogs">Blogs</a></li>
                 <li class="nav-item"><a class="nav-link text-white" href="/message">Contact</a></li>
             </ul>
         </nav>
@@ -44,27 +44,19 @@
     
     <section class="container mt-5">
         <div class="row">
+        {% for post in posts %}
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card">
                     <img src="https://via.placeholder.com/300" class="card-img-top" alt="Blog post image">
                     <div class="card-body">
-                        <h5 class="card-title">Blog Post Title</h5>
-                        <p class="card-text">Short description of the blog post...</p>
-                        <a href="#" class="btn btn-primary">Read More</a>
+              <h5 class="card-title">{{ post.blog_data.title }}</h5>
+              <p class="card-text">{{ post.blog_data.date }}</p>
+              <a href="/blogs/{{ post.path }}" class="btn btn-primary">Read More</a>
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 col-lg-4 mb-4">
-                <div class="card">
-                    <img src="https://via.placeholder.com/300" class="card-img-top" alt="Blog post image">
-                    <div class="card-body">
-                        <h5 class="card-title">Another Post</h5>
-                        <p class="card-text">Another interesting snippet...</p>
-                        <a href="#" class="btn btn-primary">Read More</a>
+        {% endfor %}
                     </div>
-                </div>
-            </div>
-        </div>
     </section>
 
     <div class="number">{{visitors}}</div>

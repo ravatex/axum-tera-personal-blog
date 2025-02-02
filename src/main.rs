@@ -69,6 +69,7 @@ async fn index_page() -> Html<String> {
     let mut context = Context::new();
     increment_visitors();
     context.insert("visitors", &get_visitors());
+    context.insert("posts", &get_all_blog_posts());
     let finished = TEMPLATES
         .render("index.html", &context)
         .unwrap_or_else(error_to_page);
