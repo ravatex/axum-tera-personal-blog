@@ -22,10 +22,9 @@
 {% endblock %}
 
 {% block content %}
-<div id="liveAlertPlaceholder" class="mb-4" ></div>
 
 <div class="form-container">
-    <h2 class="text-center mb-4">Contact Me</h2>
+    <h2 class="text-center mb-2">Contact Me</h2>
     <form id="contactForm">
 
         <div class="mb-3">
@@ -44,10 +43,11 @@
             <input class="form-check-input" type="checkbox" role="switch" id="business_inquiry">
             <label class="form-check-label" for="business_inquiry">Business Inquiry</label>
         </div>
-        <button type="submit" class="btn btn-primary w-100">Submit</button>
+        <button type="submit" class="btn btn-primary w-100 mb-3">Submit</button>
 
 
     </form>
+    <div id="liveAlertPlaceholder" class="mb-3 container-sm w-100"  ></div>
 </div>
 
 {% endblock %}
@@ -59,13 +59,18 @@
     let alertCount = 0;
 
     const appendAlert = (message, type) => {
+
+        const alertId = `alertNumber-${alertCount}`;
         const wrapper = document.createElement('div')
         wrapper.innerHTML = [
-            `<div class="alert alert-${type} alert-dismissible" role="alert">`,
+        `<div class="alert alert-${type} alert-dismissible" role="alert"  >`,
             `   <div>${message}</div>`,
             '   <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>',
             '</div>'
         ].join('')
+
+        
+        alertCount+=1;
 
 
         alertPlaceholder.append(wrapper)
@@ -100,8 +105,7 @@
         document.getElementById("contactForm").reset();
       }
       else {
-        appendAlert('Problem sending form', 'danger')
-
+        appendAlert(`Problem sending form, status: ${res.status} `, 'danger')
       }
 
     });

@@ -5,8 +5,11 @@ mod visitor;
 use request::message_post;
 
 use axum::{
+    body::Body,
     extract::Path,
-    response::Html,
+    http::{HeaderValue, Request},
+    middleware::{self, Next},
+    response::{Html, Response},
     routing::{get, post},
     Router,
 };
@@ -40,13 +43,40 @@ async fn main() {
         .route("/message", get(contact_form).post(message_post))
         .route("/blogs", get(blogs_page))
         .route("/blogs/{path}", get(get_blog_from_path))
+        .route("/notfound", get(not_found_page))
         .nest_service("/static", ServeDir::new("static"))
-        .nest_service("/images", ServeDir::new("images"));
+        .nest_service("/images", ServeDir::new("images"))
+        .layer(middleware::from_fn(no_cache_middleware))
+        .layer(middleware::from_fn(not_found_middleware));
 
     let listener = tokio::net::TcpListener::bind("127.0.0.1:8080")
         .await
         .unwrap();
     axum::serve(listener, app).await.unwrap();
+}
+
+async fn no_cache_middleware(request: Request<Body>, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    response.headers_mut().insert(
+        "Cache-Control",
+        HeaderValue::from_static("no-cache, no-store, must-revalidate"),
+    );
+    response
+}
+
+async fn not_found_middleware(request: Request<Body>, next: Next) -> Response {
+    let mut response = next.run(request).await;
+    if response.status() == 404 {
+        *response.body_mut() = Body::from(not_found_page().await);
+    }
+    response
+}
+
+async fn not_found_page() -> String {
+    let context = get_base_context();
+    TEMPLATES
+        .render("notfound.html", &context)
+        .unwrap_or_else(error_to_page)
 }
 
 async fn index_page() -> Html<String> {
@@ -82,6 +112,7 @@ async fn contact_form() -> Html<String> {
 
 fn error_to_page<T: std::error::Error>(error: T) -> String {
     let mut context = Context::new();
+
     context.insert("error", &error.to_string());
     println!("error: {:?}", error);
 
