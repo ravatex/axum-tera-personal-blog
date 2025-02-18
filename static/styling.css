@@ -70,3 +70,12 @@ article a {
     font-weight: bold;
 }
 
+
+
+.nav-link {
+    background: rgba(255, 105, 180 ,0.9); 
+    border-radius: 5px;
+    transition: background 0.3s ease-in-out;
+} 
+
+

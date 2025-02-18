@@ -90,6 +90,12 @@
 
         console.log(formData);
 
+
+
+         const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 5000);
+
+      try{
         const options = {
             method: 'POST',
             headers: {
@@ -106,7 +112,14 @@
       }
       else {
         appendAlert(`Problem sending form, status: ${res.status} `, 'danger')
-      }
+        }}
+      catch (error) {
+            if (error.name === 'AbortError') {
+                appendAlert('Request timed out. Please try again.', 'warning');
+            } else {
+                appendAlert('An error occurred. Please check your connection. If your connection is working, there may be no available servers', 'danger');
+            }
+        }
 
     });
 </script>
