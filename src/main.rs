@@ -33,7 +33,9 @@ lazy_static! {
 }
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
+
 async fn main() {
+    database::cool_stuff();
     println!("Starting the server");
 
     tokio::spawn(blog_refresher(tokio::time::Duration::new(5, 0)));
