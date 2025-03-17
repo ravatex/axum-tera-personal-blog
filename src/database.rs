@@ -1,13 +1,9 @@
-pub mod schema;
 pub mod models;
+pub mod schema;
 
 use diesel::prelude::*;
 use dotenvy::dotenv;
 use std::env;
-
-
-
-
 
 pub fn establish_connection() -> SqliteConnection {
     dotenv().ok();
@@ -22,11 +18,10 @@ pub fn establish_connection() -> SqliteConnection {
 
 use self::models::*;
 
-
 pub fn cool_stuff() {
     use schema::posts::dsl::*;
     let connection = &mut establish_connection();
-    let results =  posts
+    let results = posts
         .filter(published.eq(true))
         .limit(5)
         .select(Post::as_select())
@@ -38,4 +33,18 @@ pub fn cool_stuff() {
         println!("-----------\n");
         println!("{}", post.message);
     }
+}
+
+pub fn get_business_inquiries_by_company() -> Result<Vec<Inquiry>, diesel::result::Error> {
+    use schema::inquiries::dsl::*;
+
+    let connection = &mut establish_connection();
+
+    let results = inquiries
+        .filter(business.eq(true))
+        .order_by(name.asc())
+        .select(Inquiry::as_select())
+        .load(connection);
+
+    results
 }

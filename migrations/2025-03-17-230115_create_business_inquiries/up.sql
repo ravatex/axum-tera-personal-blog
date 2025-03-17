@@ -1,8 +1,11 @@
 -- Your SQL goes here
-CREATE TABLE posts (
+
+
+
+CREATE TABLE inquiries (
   id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
   name VARCHAR NOT NULL,
-  date DATE NOT NULL,
   message TEXT NOT NULL,
-  published BOOLEAN NOT NULL DEFAULT 0
+  email TEXT NOT NULL,
+  business BOOLEAN NOT NULL DEFAULT 0
 )
