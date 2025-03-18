@@ -56,7 +56,6 @@ async fn main() {
         .unwrap();
     axum::serve(listener, app).await.unwrap();
 }
-
 async fn no_cache_middleware(request: Request<Body>, next: Next) -> Response {
     let mut response = next.run(request).await;
     response.headers_mut().insert(

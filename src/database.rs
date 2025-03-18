@@ -35,16 +35,86 @@ pub fn cool_stuff() {
     }
 }
 
-pub fn get_business_inquiries_by_company() -> Result<Vec<Inquiry>, diesel::result::Error> {
-    use schema::inquiries::dsl::*;
+pub mod inquiries {
 
-    let connection = &mut establish_connection();
+    use super::establish_connection;
+    use super::models::Inquiry;
+    use super::schema::inquiries::dsl::*;
+    use diesel::prelude::*;
 
-    let results = inquiries
-        .filter(business.eq(true))
-        .order_by(name.asc())
-        .select(Inquiry::as_select())
-        .load(connection);
+    #[derive(Insertable)]
+    #[diesel(table_name = crate::database::schema::inquiries)]
+    pub struct NewInquiry {
+        pub name: String,
+        pub message: String,
+        pub email: String,
+        pub business: bool,
+    }
 
-    results
+    use crate::request::Message;
+    impl From<Message> for NewInquiry {
+        fn from(value: Message) -> Self {
+            NewInquiry {
+                name: value.name,
+                message: value.message,
+                email: value.email,
+                business: value.is_business,
+            }
+        }
+    }
+
+    pub fn get_business_inquiries_by_company() -> Result<Vec<Inquiry>, diesel::result::Error> {
+        let connection = &mut super::establish_connection();
+
+        let results = inquiries
+            .filter(business.eq(true))
+            .order_by(name.asc())
+            .select(Inquiry::as_select())
+            .load(connection);
+
+        results
+    }
+
+    pub fn insert_inquiry(inquiry: impl Into<NewInquiry>) -> Result<(), diesel::result::Error> {
+        let connection = &mut establish_connection();
+
+        let new_inquiry: NewInquiry = inquiry.into();
+
+        diesel::insert_into(inquiries)
+            .values(&new_inquiry)
+            .execute(connection)
+            .map(|_| ())
+    }
+}
+
+pub mod blog_posts {
+    use super::schema::posts::dsl::*;
+    use super::*;
+
+    #[derive(Insertable)]
+    #[diesel(table_name = crate::database::schema::posts)]
+    pub struct NewPost {
+        pub name: String,
+        pub date: chrono::NaiveDate,
+        pub message: String,
+        pub published: bool,
+    }
+
+
+    impl From<crate::posts::BlogPost> for NewPost {
+        fn from(value: crate::posts::BlogPost) -> Self {
+            todo!()
+        }
+    }
+
+    pub fn insert_blog_post(blog: impl Into<NewPost>) -> Result<(), diesel::result::Error> {
+        let connection = &mut establish_connection();
+
+        let new_blog: NewPost = blog.into();
+
+        diesel::insert_into(posts)
+            .values(&new_blog)
+            .execute(connection)
+            .map(|_| ())
+    }
 }

@@ -51,6 +51,8 @@ fn load_blog_post(path: &Path) -> Result<BlogPost, Box<dyn std::error::Error>> {
 
     let md_html = markdown_to_html(lines[2], &comrak::Options::default());
 
+    
+
     let name = path
         .file_name()
         .ok_or("not a good path")?
