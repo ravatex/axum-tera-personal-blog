@@ -27,6 +27,7 @@ diesel::table! {
         date -> Date,
         message -> Text,
         published -> Bool,
+        thumbnail -> Nullable<Text>,
     }
 }
 
@@ -38,6 +39,7 @@ diesel::table! {
 }
 
 diesel::joinable!(comments -> posts (post_id));
+diesel::joinable!(posts -> thumbnails (thumbnail));
 
 diesel::allow_tables_to_appear_in_same_query!(
     comments,
