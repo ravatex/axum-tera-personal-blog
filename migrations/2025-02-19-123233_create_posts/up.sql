@@ -4,5 +4,6 @@ CREATE TABLE posts (
   name VARCHAR NOT NULL,
   date DATE NOT NULL,
   message TEXT NOT NULL,
-  published BOOLEAN NOT NULL DEFAULT 0
+  published BOOLEAN NOT NULL DEFAULT 0,
+  thumbnail VARCHAR REFERENCES thumbnails ON UPDATE CASCADE
 )
