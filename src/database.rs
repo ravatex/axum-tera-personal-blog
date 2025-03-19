@@ -1,3 +1,4 @@
+#[allow(dead_code)]
 pub mod models;
 pub mod schema;
 
@@ -98,12 +99,18 @@ pub mod blog_posts {
         pub date: chrono::NaiveDate,
         pub message: String,
         pub published: bool,
+        pub thumbnail: Option<String>,
     }
-
 
     impl From<crate::posts::BlogPost> for NewPost {
         fn from(value: crate::posts::BlogPost) -> Self {
-            todo!()
+            NewPost {
+                name: value.blog_data.title,
+                date: value.blog_data.date.0,
+                message: value.contents,
+                published: value.blog_data.visible,
+                thumbnail: value.blog_data.thumbnail,
+            }
         }
     }
 
@@ -116,5 +123,38 @@ pub mod blog_posts {
             .values(&new_blog)
             .execute(connection)
             .map(|_| ())
+    }
+
+    pub fn get_blog_posts() -> Result<Vec<Post>, diesel::result::Error> {
+        let connection = &mut establish_connection();
+
+        posts
+            .filter(published.eq(true))
+            .select(Post::as_select())
+            .load(connection)
+    }
+
+    pub fn get_blog_post_from_id(id_: i32) -> Option<Post> {
+        let connection = &mut establish_connection();
+
+        posts.find(id_).first(connection).ok()
+    }
+
+    pub fn insert_with_no_duplicate_names(blog: impl Into<NewPost>) {
+        let connection = &mut establish_connection();
+            println!("Gooba");
+
+        let blog = blog.into();
+        if posts
+            .filter(name.eq(&blog.name))
+            .select(diesel::dsl::count_star())
+            .first(connection)
+            .unwrap_or(0)
+            == 0
+        {
+            println!("Adding");
+
+            diesel::insert_into(posts).values(&blog).execute(connection);
+        }
     }
 }

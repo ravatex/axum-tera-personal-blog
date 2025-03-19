@@ -1,4 +1,5 @@
 mod database;
+mod html_insertion;
 mod posts;
 mod request;
 mod visitor;
@@ -13,39 +14,44 @@ use axum::{
     routing::{get, post},
     Router,
 };
-use lazy_static::lazy_static;
+use database::blog_posts::*;
 use posts::{blog_refresher, get_blogs, BlogError};
-use tera::{Context, Tera};
 use tower_http::services::ServeDir;
 use visitor::{get_visitors, increment_visitors};
 
-lazy_static! {
-    pub static ref TEMPLATES: Tera = {
-        let tera = match Tera::new("templates/**/*") {
-            Ok(t) => t,
-            Err(e) => {
-                println!("Parsing error(s): {}", e);
-                ::std::process::exit(1);
-            }
-        };
-        tera
-    };
-}
+use html_insertion::*;
+
+use crate::posts::BlogPost;
 
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 
 async fn main() {
+    use std::env::args;
+
+    if args().nth(2).map_or(true, |s| s == "insert") {
+        match args().nth(3) {
+            None => println!("You need to supply an extra argument for the path to insert"),
+            Some(val) => database::blog_posts::insert_blog_post(
+                posts::load_blog_post(std::path::Path::new(&val)).unwrap(),
+            )
+            .unwrap(),
+        }
+    }
+
     database::cool_stuff();
     println!("Starting the server");
 
     tokio::spawn(blog_refresher(tokio::time::Duration::new(5, 0)));
 
     let app = Router::new()
-        .route("/", get(index_page))
-        .route("/message", get(contact_form).post(message_post))
-        .route("/blogs", get(blogs_page))
-        .route("/blogs/{path}", get(get_blog_from_path))
-        .route("/notfound", get(not_found_page))
+        .route("/", get(|| async {Html(index_page_filled())}))
+        .route(
+            "/message",
+            get(|| async { Html(contact_form()) }).post(message_post),
+        )
+        .route("/blogs", get(|| async { Html(blogs_page_filled()) }))
+        .route("/blogs/{path}", get(|x| async { Html(blog_path(x)) }))
+        .route("/notfound", get(|| async { Html(not_found_page()) }))
         .nest_service("/static", ServeDir::new("static"))
         .nest_service("/images", ServeDir::new("images"))
         .layer(middleware::from_fn(no_cache_middleware))
@@ -68,78 +74,44 @@ async fn no_cache_middleware(request: Request<Body>, next: Next) -> Response {
 async fn not_found_middleware(request: Request<Body>, next: Next) -> Response {
     let mut response = next.run(request).await;
     if response.status() == 404 {
-        *response.body_mut() = Body::from(not_found_page().await);
+        *response.body_mut() = Body::from(not_found_page());
     }
     response
 }
 
-async fn not_found_page() -> String {
-    let context = get_base_context();
-    TEMPLATES
-        .render("notfound.html", &context)
-        .unwrap_or_else(error_to_page)
-}
 
-async fn index_page() -> Html<String> {
-    let mut context = get_base_context();
-    increment_visitors();
-    context.insert("posts", &*get_blogs().await);
-    let finished = TEMPLATES
-        .render("index.html", &context)
-        .unwrap_or_else(error_to_page);
 
-    Html(finished)
-}
-
-async fn blogs_page() -> Html<String> {
-    let mut context = get_base_context();
-
-    context.insert("posts", &*get_blogs().await);
-
-    let finished = TEMPLATES
-        .render("blogs.html", &context)
-        .unwrap_or_else(error_to_page);
-
-    Html(finished)
-}
-
-async fn contact_form() -> Html<String> {
-    Html(
-        TEMPLATES
-            .render("contact.html", &get_base_context())
-            .unwrap_or_else(error_to_page),
-    )
-}
-
-fn error_to_page<T: std::error::Error>(error: T) -> String {
-    let mut context = Context::new();
-
-    context.insert("error", &error.to_string());
-    println!("error: {:?}", error);
-
-    TEMPLATES.render("error.html", &context).unwrap()
-}
-
-async fn get_blog_from_path(Path(path): Path<String>) -> Html<String> {
-    let blogs = &*get_blogs().await;
-    let post = blogs.iter().find(|x| x.path == path);
-
-    let page = match post {
-        Some(post) => {
-            let mut context = get_base_context();
-            context.insert("post", post);
-            TEMPLATES
-                .render("blog_form.html", &context)
-                .unwrap_or_else(error_to_page)
-        }
-        None => error_to_page(BlogError::BlogNotFound(path)),
+fn blog_path(Path(path): Path<i32>) -> Html<String> {
+    use html_insertion::*;
+    let render = match get_blog_post_from_id(path) {
+        Some(blog) => make_blog(crate::BlogPost::from(blog)),
+        None => error_to_page(BlogError::BlogNotFound(format!("{path}"))),
     };
 
-    Html(page)
+    Html(render)
 }
 
-fn get_base_context() -> Context {
-    let mut context = Context::new();
-    context.insert("visitors", &get_visitors());
-    context
+fn blogs_page_filled() -> String 
+ {
+    match database::blog_posts::get_blog_posts() {
+        Ok(blogs) => {
+            let s = blogs;
+            blogs_page(s)
+        }
+        Err(e) => error_to_page(e),
+    }
+}
+
+fn index_page_filled() -> String {
+    let blog_posts = database::blog_posts::get_blog_posts();
+    println!("{blog_posts:?}");
+    match blog_posts {
+        Ok(blogs) => {
+            let s = blogs;
+            index_page(s)
+        }
+        Err(e) => error_to_page(e),
+    }
+
+
 }

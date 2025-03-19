@@ -19,8 +19,8 @@
         {% for post in posts %}
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card" >
-          {% if post.blog_data.thumbnail %}
-            {% set img = post.blog_data.thumbnail %}
+          {% if post.blog_thumbnail %}
+            {% set img = post.blog_thumbnail %}
             {% set alt_text = "thumbnail" %}
           {% else %}
            {% set img = "/images/basic_background.png"%} {% set alt_text = "default image: blue background" %}
@@ -29,11 +29,11 @@
             <img src= "{{img}}"  style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;" alt="{{alt_text}}">
             </div>
                     <div class="card-body">
-              <h5 class="card-title">{{ post.blog_data.title }}</h5>
-              <h6 class="card-subtitle mb-2 text-body-secondary">{{ post.blog_data.date }}</h6>
+              <h5 class="card-title">{{ post.blog_name }}</h5>
+              <h6 class="card-subtitle mb-2 text-body-secondary">{{ post.blog_date }}</h6>
 
               <p class="card-text">no description</p>
-              <a href="/blogs/{{ post.path }}" class="btn btn-primary">Read More</a>
+              <a href="/blogs/{{ post.blog_id }}" class="btn btn-primary">Read More</a>
                     </div>
                 </div>
             </div>

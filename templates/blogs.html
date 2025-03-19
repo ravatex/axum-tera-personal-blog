@@ -5,7 +5,7 @@
 <ul>
     {% for post in posts %}
     <li>
-        <a href="/blogs/{{ post.path }}">{{ post.blog_data.title }}</a> - {{ post.blog_data.date }}
+        <a href="/blogs/{{ post.blog_id }}">{{ post.blog_name }}</a> - {{ post.blog_date }}
     </li>
     {% endfor %}
 </ul>

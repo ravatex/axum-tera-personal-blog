@@ -35,12 +35,12 @@
         <div class="row justify-content-center">
             <div class="col-lg-8">
                 <div class="blog-post">
-              <h1 class="blog-title">{{ post.blog_data.title }}</h1>
+              <h1 class="blog-title">{{ post.blog_name }}</h1>
                     
-              <div class="blog-date">Published on: {{ post.blog_data.date }}</div>
+              <div class="blog-date">Published on: {{ post.blog_date }}</div>
                     
                     <div class="blog-content">
-     {{post.contents | safe}}                    </div>
+     {{post.blog_message | safe}}                    </div>
                 </div>
             </div>
         </div>

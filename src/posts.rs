@@ -23,21 +23,87 @@ impl std::fmt::Display for BlogError {
 
 impl std::error::Error for BlogError {}
 
+pub struct SerdeNaiveDate(pub chrono::NaiveDate);
+
+impl Serialize for SerdeNaiveDate {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.0.format("%Y-%m-%d").to_string())
+    }
+}
+
+impl<'de> Deserialize<'de> for SerdeNaiveDate {
+    fn deserialize<D: serde::Deserializer<'de>>(deserializer: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(deserializer)?;
+        let date_err = chrono::NaiveDate::parse_from_str(&s, "%Y-%m-%d").map_err(|e| {
+            serde::de::Error::custom(format!(
+                "Error parsing date, format needed %Y-%m-%d;\n got {s};\n Message: {e:?}"
+            ))
+        })?;
+
+        Ok(SerdeNaiveDate(date_err))
+    }
+}
+
 #[derive(Serialize)]
 pub struct BlogPost {
     pub path: String,
     pub contents: String,
     pub blog_data: BlogData,
 }
+
 #[derive(Serialize, Deserialize)]
 pub struct BlogData {
     pub title: String,
-    pub date: String,
+    pub date: SerdeNaiveDate,
     pub visible: bool,
     pub thumbnail: Option<String>,
 }
 
-fn load_blog_post(path: &Path) -> Result<BlogPost, Box<dyn std::error::Error>> {
+use crate::database::models::Post;
+impl From<Post> for BlogPost {
+    fn from(value: Post) -> Self {
+        let blog_data = BlogData {
+            title: value.name,
+            date: SerdeNaiveDate(value.date),
+            thumbnail: value.thumbnail,
+            visible: value.published,
+        };
+
+        BlogPost {
+            path: format!("{}", value.id),
+            contents: value.message,
+            blog_data,
+        }
+    }
+}
+
+use crate::html_insertion::IntoBlog;
+impl IntoBlog for BlogPost {
+    fn blog_name(&self) -> String {
+        self.blog_data.title.clone()
+    }
+
+    fn blog_date(&self) -> String {
+        self.blog_data.date.0.format("%Y-%m-%d").to_string()
+    }
+
+    fn blog_message(&self) -> String {
+        self.contents.clone()
+    }
+
+    fn blog_thumbnail(&self) -> Option<String> {
+        self.blog_data.thumbnail.clone()
+    }
+
+    fn blog_id(&self) -> String {
+        format!("{}", self.path)
+    }
+}
+
+pub fn load_blog_post(path: &Path) -> Result<BlogPost, Box<dyn std::error::Error>> {
     let blog_post = fs::read_to_string(path)?;
 
     let lines: Vec<&str> = blog_post.splitn(3, "---").collect();
@@ -47,11 +113,10 @@ fn load_blog_post(path: &Path) -> Result<BlogPost, Box<dyn std::error::Error>> {
     }
 
     let blog_data: BlogData = serde_json::from_str(lines[1])?;
-    
+
+    println!("Is ok! : {path:?}");
 
     let md_html = markdown_to_html(lines[2], &comrak::Options::default());
-
-    
 
     let name = path
         .file_name()
@@ -101,15 +166,12 @@ pub fn get_all_blog_posts() -> Vec<BlogPost> {
         .collect()
 }
 
-static BLOGS: LazyLock<RwLock<Vec<BlogPost>>> = LazyLock::new(|| get_all_blog_posts().into());
 
-pub async fn get_blogs() -> tokio::sync::RwLockReadGuard<'static, Vec<BlogPost>> {
-    BLOGS.read().await
-}
 
 pub async fn refresh_blogs() {
-    let mut blogs = BLOGS.write().await;
-    *blogs = get_all_blog_posts();
+    get_all_blog_posts()
+        .into_iter()
+        .for_each(crate::database::blog_posts::insert_with_no_duplicate_names);
 }
 
 use tokio::time::{self, Duration};
