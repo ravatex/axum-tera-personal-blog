@@ -14,6 +14,7 @@ pub struct Message {
 
 pub async fn message_post(Json(message): Json<Message>) -> impl IntoResponse {
     println!("{:?}", message);
+
     println!("{:?}", get_business_inquiries_by_company());
     match insert_inquiry(message) {
         Ok(()) => (StatusCode::OK, "Message recieved succesfully".into()),

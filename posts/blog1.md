@@ -1,8 +1,8 @@
 ---
 {
     "title": "First Blog Post",
-    "date": "1/2/2025",
-    "visible" : true,
+    "date": "2025-01-12",
+    "visible" : true ,
     "thumbnail" : "/images/some_image.jpg"
 }
 ---

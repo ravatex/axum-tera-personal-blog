@@ -15,9 +15,8 @@ use axum::{
     Router,
 };
 use database::blog_posts::*;
-use posts::{blog_refresher, get_blogs, BlogError};
+use posts::{blog_refresher, BlogError};
 use tower_http::services::ServeDir;
-use visitor::{get_visitors, increment_visitors};
 
 use html_insertion::*;
 
@@ -49,6 +48,7 @@ async fn main() {
             "/message",
             get(|| async { Html(contact_form()) }).post(message_post),
         )
+
         .route("/blogs", get(|| async { Html(blogs_page_filled()) }))
         .route("/blogs/{path}", get(|x| async { Html(blog_path(x)) }))
         .route("/notfound", get(|| async { Html(not_found_page()) }))
