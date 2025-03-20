@@ -1,3 +1,4 @@
+mod cli;
 mod database;
 mod html_insertion;
 mod posts;
@@ -25,30 +26,63 @@ use crate::posts::BlogPost;
 #[tokio::main(flavor = "multi_thread", worker_threads = 4)]
 
 async fn main() {
-    use std::env::args;
+    use clap::Parser;
+    use cli::Commands::*;
+    use cli::*;
 
-    if args().nth(2).map_or(true, |s| s == "insert") {
-        match args().nth(3) {
-            None => println!("You need to supply an extra argument for the path to insert"),
-            Some(val) => database::blog_posts::insert_blog_post(
-                posts::load_blog_post(std::path::Path::new(&val)).unwrap(),
-            )
-            .unwrap(),
+    let cli = Cli::parse();
+
+    match &cli.command {
+        None => start_server().await,
+        Some(Add(path)) => {
+            let blog = posts::load_blog_post(&path.path);
+
+            match blog {
+                Err(e) => println!("Error with blog: {e}"),
+                Ok(blog) => {
+                    let _ = database::blog_posts::insert_blog_post(blog)
+                        .inspect_err(|e| println!("Error with adding into database {e}"));
+                }
+            }
+        }
+        Some(Edit(info)) => {
+            let id = info.blog_id;
+            let blog = &info.path;
+
+            let blog = posts::load_blog_post(&blog);
+
+            match blog {
+                Err(e) => println!("Error with blog: {e}"),
+                Ok(blog) => match database::blog_posts::edit_blog_post(id, blog) {
+                    Ok(0) => println!("Blog post with id: {id} not found"),
+                    Ok(_) => println!("Blog post succesfully updated"),
+                    Err(e) => println!("Error updating database {e}"),
+                },
+            }
+        }
+        Some(Remove(blog_deleting)) => {
+            let id = blog_deleting.id;
+
+            match remove_blog_post(id) {
+                Ok(0) => println!("Blog with id not found"),
+                Ok(_) => println!("Succesfully deleleted blog post with id {id}"),
+                Err(e) => println!("Error deleting blog post {e}"),
+            }
         }
     }
+}
 
-    database::cool_stuff();
+async fn start_server() {
     println!("Starting the server");
 
     tokio::spawn(blog_refresher(tokio::time::Duration::new(5, 0)));
 
     let app = Router::new()
-        .route("/", get(|| async {Html(index_page_filled())}))
+        .route("/", get(|| async { Html(index_page_filled()) }))
         .route(
             "/message",
             get(|| async { Html(contact_form()) }).post(message_post),
         )
-
         .route("/blogs", get(|| async { Html(blogs_page_filled()) }))
         .route("/blogs/{path}", get(|x| async { Html(blog_path(x)) }))
         .route("/notfound", get(|| async { Html(not_found_page()) }))
@@ -62,6 +96,7 @@ async fn main() {
         .unwrap();
     axum::serve(listener, app).await.unwrap();
 }
+
 async fn no_cache_middleware(request: Request<Body>, next: Next) -> Response {
     let mut response = next.run(request).await;
     response.headers_mut().insert(
@@ -79,8 +114,6 @@ async fn not_found_middleware(request: Request<Body>, next: Next) -> Response {
     response
 }
 
-
-
 fn blog_path(Path(path): Path<i32>) -> Html<String> {
     use html_insertion::*;
     let render = match get_blog_post_from_id(path) {
@@ -91,8 +124,7 @@ fn blog_path(Path(path): Path<i32>) -> Html<String> {
     Html(render)
 }
 
-fn blogs_page_filled() -> String 
- {
+fn blogs_page_filled() -> String {
     match database::blog_posts::get_blog_posts() {
         Ok(blogs) => {
             let s = blogs;
@@ -112,6 +144,4 @@ fn index_page_filled() -> String {
         }
         Err(e) => error_to_page(e),
     }
-
-
 }

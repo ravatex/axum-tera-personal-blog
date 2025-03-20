@@ -92,7 +92,7 @@ pub mod blog_posts {
     use super::schema::posts::dsl::*;
     use super::*;
 
-    #[derive(Insertable)]
+    #[derive(Insertable, AsChangeset)]
     #[diesel(table_name = crate::database::schema::posts)]
     pub struct NewPost {
         pub name: String,
@@ -142,7 +142,7 @@ pub mod blog_posts {
 
     pub fn insert_with_no_duplicate_names(blog: impl Into<NewPost>) {
         let connection = &mut establish_connection();
-            println!("Gooba");
+        println!("Gooba");
 
         let blog = blog.into();
         if posts
@@ -156,5 +156,21 @@ pub mod blog_posts {
 
             diesel::insert_into(posts).values(&blog).execute(connection);
         }
+    }
+
+    pub fn edit_blog_post(
+        id_: i32,
+        post: impl Into<NewPost>,
+    ) -> Result<usize, diesel::result::Error> {
+        let connection = &mut establish_connection();
+        diesel::update(posts.find(id_))
+            .set(post.into())
+            .execute(connection)
+    }
+
+    pub fn remove_blog_post(id_: i32) -> Result<usize, diesel::result::Error> {
+        
+        let connection = &mut establish_connection();
+        diesel::delete(posts.find(id_)).execute(connection)
     }
 }
