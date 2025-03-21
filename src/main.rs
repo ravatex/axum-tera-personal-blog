@@ -69,6 +69,45 @@ async fn main() {
                 Err(e) => println!("Error deleting blog post {e}"),
             }
         }
+        Some(Read(get_blogs)) => {
+            let blogs = database::blog_posts::get_blog_posts();
+
+            match blogs {
+                Ok(blogs) => {
+                    let mut blogs = blogs;
+
+                    if let Some(id) = get_blogs.filters.filter_id {
+                        blogs = blogs.into_iter().filter(|b| b.id.eq(&id)).collect();
+                    }
+
+                    if let Some(title) = &get_blogs.filters.filter_title {
+                        blogs = blogs.into_iter().filter(|b| b.name.eq(title)).collect();
+                    }
+
+                    println!("Found {} matches:", blogs.len());
+                    for blog in blogs {
+                        println!();
+                        if get_blogs.all_info {
+                            println!("{blog:?}");
+                            continue;
+                        }
+                        if get_blogs.ids {
+                            println!("id: {}", blog.id);
+                        }
+                        if get_blogs.dates {
+                            println!("date : {}", blog.date);
+                        }
+
+                        if get_blogs.names {
+                            println!("name: {}", blog.name);
+                        }
+                    }
+                }
+                Err(e) => {
+                    println!("Error with accessing database {e}")
+                }
+            }
+        }
     }
 }
 
