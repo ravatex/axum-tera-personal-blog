@@ -1,10 +1,9 @@
 use comrak::markdown_to_html;
 use serde::{Deserialize, Serialize};
-use std::sync::LazyLock;
 use std::{fs, path::Path};
-use tokio::sync::RwLock;
 
 #[derive(Debug)]
+#[allow(dead_code)]
 pub enum BlogError {
     BlogNotFound(String),
     NoAccess(String),
@@ -131,6 +130,8 @@ pub fn load_blog_post(path: &Path) -> Result<BlogPost, Box<dyn std::error::Error
     })
 }
 
+
+#[allow(dead_code)]
 pub fn get_all_blog_posts() -> Vec<BlogPost> {
     let mut posts = Vec::new();
 
@@ -168,18 +169,5 @@ pub fn get_all_blog_posts() -> Vec<BlogPost> {
 
 
 
-pub async fn refresh_blogs() {
-    get_all_blog_posts()
-        .into_iter()
-        .for_each(crate::database::blog_posts::insert_with_no_duplicate_names);
-}
 
-use tokio::time::{self, Duration};
-pub async fn blog_refresher(timeout_between_refreshes: Duration) {
-    let mut interval = time::interval(timeout_between_refreshes);
-    interval.set_missed_tick_behavior(time::MissedTickBehavior::Skip);
-    loop {
-        interval.tick().await;
-        refresh_blogs().await;
-    }
-}
+

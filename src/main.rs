@@ -3,6 +3,7 @@ mod database;
 mod html_insertion;
 mod posts;
 mod request;
+#[allow(dead_code)]
 mod visitor;
 use request::message_post;
 
@@ -12,11 +13,11 @@ use axum::{
     http::{HeaderValue, Request},
     middleware::{self, Next},
     response::{Html, Response},
-    routing::{get, post},
+    routing::get,
     Router,
 };
 use database::blog_posts::*;
-use posts::{blog_refresher, BlogError};
+use posts::BlogError;
 use tower_http::services::ServeDir;
 
 use html_insertion::*;
@@ -114,7 +115,6 @@ async fn main() {
 async fn start_server() {
     println!("Starting the server");
 
-    tokio::spawn(blog_refresher(tokio::time::Duration::new(5, 0)));
 
     let app = Router::new()
         .route("/", get(|| async { Html(index_page_filled()) }))

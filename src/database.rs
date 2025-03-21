@@ -19,23 +19,6 @@ pub fn establish_connection() -> SqliteConnection {
 
 use self::models::*;
 
-pub fn cool_stuff() {
-    use schema::posts::dsl::*;
-    let connection = &mut establish_connection();
-    let results = posts
-        .filter(published.eq(true))
-        .limit(5)
-        .select(Post::as_select())
-        .load(connection)
-        .expect("Error loading posts");
-    println!("Displaying {} posts", results.len());
-    for post in results {
-        println!("{}", post.name);
-        println!("-----------\n");
-        println!("{}", post.message);
-    }
-}
-
 pub mod inquiries {
 
     use super::establish_connection;
@@ -140,24 +123,6 @@ pub mod blog_posts {
         posts.find(id_).first(connection).ok()
     }
 
-    pub fn insert_with_no_duplicate_names(blog: impl Into<NewPost>) {
-        let connection = &mut establish_connection();
-        println!("Gooba");
-
-        let blog = blog.into();
-        if posts
-            .filter(name.eq(&blog.name))
-            .select(diesel::dsl::count_star())
-            .first(connection)
-            .unwrap_or(0)
-            == 0
-        {
-            println!("Adding");
-
-            diesel::insert_into(posts).values(&blog).execute(connection);
-        }
-    }
-
     pub fn edit_blog_post(
         id_: i32,
         post: impl Into<NewPost>,
@@ -169,7 +134,6 @@ pub mod blog_posts {
     }
 
     pub fn remove_blog_post(id_: i32) -> Result<usize, diesel::result::Error> {
-        
         let connection = &mut establish_connection();
         diesel::delete(posts.find(id_)).execute(connection)
     }

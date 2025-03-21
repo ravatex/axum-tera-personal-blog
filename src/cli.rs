@@ -66,13 +66,4 @@ pub struct Filters {
     pub filter_id: Option<i32>,
 }
 
-impl GetBlogs {
-    pub fn anything(&self) -> bool {
-        self.all_info
-            || self.ids
-            || self.names
-            || self.dates
-            || self.filters.filter_id.is_some()
-            || self.filters.filter_title.is_some()
-    }
-}
+

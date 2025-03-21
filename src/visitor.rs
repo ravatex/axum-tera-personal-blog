@@ -43,9 +43,6 @@ impl VisitorLogSmall {
         Self::create_visitor_log(TimeDelta::hours(1))
     }
 
-    pub fn get_visitors(nth: usize) -> Option<usize> {
-        None
-    }
 
     pub fn get_all_visitors(&self) -> usize {
         let count = self.past_visitors.iter().fold(0, |acc, x| acc + x);
